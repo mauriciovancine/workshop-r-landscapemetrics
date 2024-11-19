@@ -1716,6 +1716,23 @@ Apenas para as métricas calculadas para manchas
 [landscapemetrics](https://github.com/mauriciovancine/workshop-landscapemetrics), [Hesselbarth et al. (2019)](https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.04617)
 :::
 
+## Material
+
+::: {style="font-size: 52%;"}
+- [Bivand, R. S., Pebesma, E., & Gómez-Rubio, V. (2013). Applied Spatial Data Analysis with R. Springer New York.](https://doi.org/10.1007/978-1-4614-7618-4)
+- [Brunsdon, L. D. of T. and C. P. C., & Comber, L. (2015). An Introduction to R for Spatial Analysis and Mapping. Sage Publications Ltd.](https://uk.sagepub.com/en-gb/eur/an-introduction-to-r-for-spatial-analysis-and-mapping/book258267)
+- [Wegmann, M., Leutner, B., & Dech, S. (2016). Remote Sensing and GIS for Ecologists: Using Open Source Software (Illustrated edition). Pelagic Publishing.](https://pelagicpublishing.com/collections/martin-wegmann/products/remote-sensing-and-gis-for-ecologists-wegmann-leutner-dech)
+- [Fletcher, R., & Fortin, M.-J. (2018). Spatial Ecology and Conservation Modeling: Applications with R. Springer International Publishing.](https://doi.org/10.1007/978-3-030-01989-1)
+- [Moraga, P. (2019). Geospatial Health Data: Modeling and Visualization with R-INLA and Shiny. Chapman and Hall/CRC.](https://www.paulamoraga.com/book-geospatial/)
+- [Wegmann, M., Schwalb-Willmann, J., & Dech, S. (2020). An introduction to spatial data analysis: Remote sensing and GIS with open source software. Pelagic Publishing.](https://pelagicpublishing.com/collections/martin-wegmann/products/an-introduction-to-spatial-data-analysis)
+- [Comber, L., & Brunsdon, C. (2021). Geographical Data Science and Spatial Data Analysis: An Introduction in R. Sage Publications Ltd.](https://collegepublishing.sagepub.com/products/geographical-data-science-and-spatial-data-analysis-1-260671)
+- [Da Silva, F. R., Gonçalves-Souza, T., Paterno, G. B., Provete, D. B., & Vancine, M. H. (2022). Análises Ecológicas no R. NUPEEA.](https://analises-ecologicas.com/)
+- [Pebesma, E., & Bivand, R. (2023). Spatial Data Science: With Applications in R. Chapman and Hall/CRC.](https://r-spatial.org/book/)
+- [Moraga, P. (2023). Spatial Statistics for Data Science: Theory and Practice with R. Chapman and Hall/CRC..](https://www.paulamoraga.com/book-spatial/)
+- [Oyana, T. J. (2023). Spatial Analysis with R: Statistics, Visualization, and Computational Methods. CRC Press.]()
+- [Lovelace, R., Nowosad, J., & Muenchow J. (2025). Geocomputation with R. Springer International Publishing.](https://r.geocompx.org/)
+:::
+
 # Bora para o R!
 
 ## Muito obrigado!
@@ -1726,7 +1743,7 @@ Apenas para as métricas calculadas para manchas
 
 - [Felipe Sodré Barros](https://felipesbarros.github.io/pt/)
 - [Beatriz Milz](https://beatrizmilz.com/)
-- [Miltinho](https://leec.eco.br/people/prof-milton-cezar-ribeiro-miltinho/)
+- [Prof. Milton Cezar Ribeiro](https://leec.eco.br/people/prof-milton-cezar-ribeiro-miltinho/)
 
 <center>
 <img src="img/syneco.png" style="width:75%"/>

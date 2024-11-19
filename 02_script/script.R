@@ -118,6 +118,12 @@ mapbiomas2023_santa_maria_utm
 landscapemetrics::check_landscape(mapbiomas1985_santa_maria_utm)
 landscapemetrics::check_landscape(mapbiomas2023_santa_maria_utm)
 
+# diagrama de sankey ------------------------------------------------------
+
+# 
+
+
+
 # listar as metricas ------------------------------------------------------
 
 ## metricas ----

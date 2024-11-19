@@ -1,22 +1,22 @@
-# Métricas de paisagem no R: landscapemetrics
+# Introdução à métricas de paisagem no R
 
-## Laboratório de Ecologia Espacial e Conservação
+## SynEco - I Simpósio Brasileiro de Síntese Ecológica
 
 **Docente**  
 Prof. Maurício Vancine
 
 **Duração**  
-4 horas
+2 horas
 
 **Resumo**  
-O minicurso tem como intuito oferecer uma introdução teórica e prática sobre o cálculo de métricas de paisagem utilizando a linguagem R através do pacote *landscapemetrics*. Primeiramente são apresentados os principais conceitos de ecologia da paisagem, métricas de paisagem, geoprocessamento, dados geoespaciais, linguagem R, e detalhes do pacote *landscapmetrics*.
+O curso tem o intuito de oferecer uma introdução teórica e prática sobre o cálculo de métricas de paisagem utilizando a linguagem R através do pacote *landscapemetrics*. Primeiramente são apresentados os principais conceitos de ecologia da paisagem, métricas de paisagem, geoprocessamento, dados geoespaciais, linguagem R e detalhes do pacote *landscapmetrics*.
 
 ---
 
 ### Informações aos participantes
 
 **Datas e horários**  
-05/07/2022 das 08h-12h
+27/11/2024 das 08:30h-10:30h
 
 **Contato**  
 Para mais informações ou dúvidas, envie e-mail para Maurício Vancine (mauricio.vancine@gmail.com)
@@ -31,8 +31,8 @@ Será necessário que todos usem seus notebooks ou desktops
 **Softwares**  
 Instalar a versão mais recente do 
 
-1. [R (>4.2.0)](https://www.r-project.org)
-2. [RStudio (2022.02.3-492)](https://www.rstudio.com)
+1. [R (4.2.2)](https://www.r-project.org)
+2. [RStudio](https://www.rstudio.com)
 
 - [Vídeo de instalação do R e do RStudio](https://youtu.be/l1bWvZMNMCM)
 
@@ -60,12 +60,12 @@ Instalem os pacotes do script abaixo. Para mais detalhes, consultar [capítulo 0
 
 ## Slides
 
-[slides](https://mauriciovancine.github.io/workshop-landscapemetrics/01_slides/slides.html#/)
+[slides](https://mauriciovancine.github.io/workshop-r-landscapemetrics/01_slides/slides.html#/)
 
 ---
 
 ## Script
 
-[script](https://github.com/mauriciovancine/workshop-landscapemetrics/blob/main/02_script/script.R)
+[script](https://github.com/mauriciovancine/workshop-r-landscapemetrics/blob/main/02_script/script.R)
 
 ---
