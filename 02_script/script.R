@@ -1,177 +1,105 @@
 #' ----
-#' theme: metricas paisagem no r: landscapemetrics
+#' theme: introducao a metricas de paisagem no r
 #' autor: mauricio vancine
-#' data: 2022-07-05
+#' data: 27/11/2024
 #' ----
 
 # preparar r --------------------------------------------------------------
 
-# pacotes
-library(tidyverse)
-library(sf)
-library(raster)
-library(fasterize)
-library(landscapemetrics)
-library(tmap)
+# instalar e carregar pacotes
+if(!require(tidyverse)) install.packages("tidyverse")
+if(!require(pdftools)) install.packages("pdftools")
+if(!require(geobr)) install.packages("geobr")
+if(!require(terra)) install.packages("terra")
+if(!require(remotes)) install.packages("remotes")
+if(!require(OpenLand)) remotes::install_github("reginalexavier/OpenLand")
+if(!require(landscapemetrics)) install.packages("landscapemetrics")
+# if(require(tmap)) remove.packages("r-tmap/tmap")
+if(!require(tmap)) install_github("r-tmap/tmap")
 
-# source
-source("https://raw.githubusercontent.com/phuais/multifit/master/multifit.R")
+# verificar tmap
+packageVersion("tmap") # ‘3.99.9002’
 
 # options
 options(timeout = 600)
 
 # importar dados ----------------------------------------------------------
 
-# vetor ----
+## download mapbiomas ----
+# download.file(url = "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_9/lclu/coverage/brasil_coverage_1985.tif",
+#               destfile = "03_data/brasil_coverage_1985.tif", mode = "wb", )
+# 
+# download.file(url = "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_9/lclu/coverage/brasil_coverage_2023.tif",
+#               destfile = "03_data/brasil_coverage_2023.tif", mode = "wb")
+# 
+# download.file(url = "https://brasil.mapbiomas.org/wp-content/uploads/sites/4/2024/10/Legenda-Colecao-9-LEGEND-CODE_v2.pdf",
+#               destfile = "03_data/Legenda-Colecao-9-LEGEND-CODE_v2.pdf", mode = "wb")
 
-## download ----
-for(i in c(".dbf", ".prj", ".shp", ".shx")){
-    download.file(url = paste0("http://geo.fbds.org.br/SP/RIO_CLARO/USO/SP_3543907_USO", i),
-                  destfile = paste0("03_data/SP_3543907_USO", i), mode = "wb")
-}
+## importe a legenda ----
+mapbiomas_legend <- pdftools::pdf_text("03_data/Legenda-Colecao-9-LEGEND-CODE_v2.pdf") %>% 
+    stringr::str_split("[\\r\\n]+") %>% 
+    unlist() %>% 
+    stringr::str_trim() %>% 
+    stringr::str_split_fixed("\\s{2,}", 5) %>% 
+    tibble::as_tibble() %>% 
+    dplyr::select(1, 3, 4) %>% 
+    dplyr::slice(-c(1:5, 43)) %>% 
+    dplyr::rename(class = 1, value = 2, color = 3) %>% 
+    dplyr::mutate(value = as.numeric(value),
+                  class = str_trim(str_replace_all(class, "[0-9\\.]", ""))) %>% 
+    dplyr::bind_rows(tibble::tibble(class = "Não definido", value = 0, color = "gray"))
+mapbiomas_legend
+
+## limite santa maria ----
+santa_maria <- geobr::read_municipality(code_muni = 4316907, year = 2020) %>% 
+    sf::st_transform(4326) %>% 
+    terra::vect()
+santa_maria
+
+## importar
+santa_maria <- terra::vect("03_data/santa_maria.shp")
+santa_maria
 
 ## importar ----
-uso <- sf::st_read("03_data/SP_3543907_USO.shp", quiet = TRUE)
+mapbiomas1985_santa_maria <- terra::rast("03_data/mapbiomas1985_santa_maria.tif") %>% 
+    terra::crop(santa_maria, mask = TRUE)
+mapbiomas1985_santa_maria
 
-# tabela de atributos
-sf::st_drop_geometry(uso)
+mapbiomas2023_santa_maria <- terra::rast("03_data/mapbiomas2023_santa_maria.tif") %>% 
+    terra::crop(santa_maria, mask = TRUE)
+mapbiomas2023_santa_maria
 
-# plot
-tm_shape(uso) +
-    tm_fill(col = "CLASSE_USO", title = "Legenda",
-            pal = c("blue", "orange", "gray", "forestgreen", "green"))
+## classes
+mapbiomas1985_santa_maria_classes <- terra::freq(mapbiomas1985_santa_maria) %>% 
+    dplyr::left_join(mapbiomas_legend) %>% 
+    dplyr::arrange(value)
+mapbiomas1985_santa_maria_classes
 
-# criar uma coluna numerica para as classes de uso da terra
-uso$classe_num <- factor(uso$CLASSE_USO)
-sf::st_drop_geometry(uso)
+mapbiomas2023_santa_maria_classes <- terra::freq(mapbiomas2023_santa_maria) %>% 
+    dplyr::left_join(mapbiomas_legend) %>% 
+    dplyr::arrange(value)
+mapbiomas2023_santa_maria_classes
 
-# rasterizar --------------------------------------------------------------
+# plot - vai demorar um pouco...
+tm_shape(mapbiomas1985_santa_maria) +
+    tm_raster(col = "brasil_coverage_1985", 
+              col.scale = tm_scale_categorical(values = mapbiomas1985_santa_maria_classes$color,
+                                               labels = paste0(mapbiomas1985_santa_maria_classes$value, "-", mapbiomas1985_santa_maria_classes$class)),
+              col.legend = tm_legend(title = "Uso e cobertura 1985",
+                                     position = tm_pos_out("right", "center")))
 
-## criar um raster vazio
-ra <- fasterize::raster(uso, res = 30)
-ra
-
-# rasterizar
-uso_raster <- fasterize::fasterize(sf = uso, raster = ra, field = "classe_num")
-uso_raster
-
-# mapa fasterize
-tm_shape(uso_raster) +
-    tm_raster(style = "cat", title = "Legenda",
-              palette = c("blue", "orange", "gray", "forestgreen", "green")) +
-    tm_grid(lines = FALSE, labels.rot = c(0, 90), labels.size = .8) +
-    tm_compass(position = c(.73, .08)) +
-    tm_scale_bar(position = c(.63, 0), text.size = .65) +
-    tm_layout(legend.position = c("left", "bottom")) 
-
-# buffers -----------------------------------------------------------------
-
-# amostragens de campo
-amost <- readr::read_csv("03_data/pontos_amostragem.csv")
-amost
-
-# amostragens vetoriais
-amost_vetor <- sf::st_as_sf(x = amost, coords = c("x", "y"), crs = raster::crs(uso))
-amost_vetor
-
-# buffers
-buffers <- sf::st_buffer(x = amost_vetor, dist = 1000)
-buffers
-
-# mapa
-tm_shape(uso_raster) +
-    tm_raster(style = "cat", title = "Legenda",
-              palette = c("blue", "orange", "gray", "forestgreen", "green")) +
-    tm_shape(buffers) +
-    tm_borders(col = "red", lwd = 2) +
-    tm_shape(amost_vetor) +
-    tm_dots(size = .7, shape = 20, alpha = .7) +
-    tm_grid(lines = FALSE, labels.rot = c(0, 90), labels.size = .8) +
-    tm_compass(position = c(.73, .08)) +
-    tm_scale_bar(position = c(.63, 0), text.size = .65) +
-    tm_layout(legend.position = c("left", "bottom")) 
-
-# ajustar paisagens -------------------------------------------------------
-
-# crop e mask das paisagens
-paisagens <- raster::mask(uso_raster, buffers)
-paisagens
-
-tm_shape(paisagens) +
-    tm_raster(style = "cat", title = "Legenda",
-              palette = c("blue", "orange", "gray", "forestgreen", "green")) +
-    tm_shape(buffers) +
-    tm_borders(col = "red", lwd = 2) +
-    tm_shape(amost_vetor) +
-    tm_dots(size = .7, shape = 20, alpha = .7)
-
-# crop e mask das paisagens individualmente
-paisagens_list <- NULL
-
-for(i in 1:10){
-    
-    # informacao
-    print(paste0("Ajustando a paisagem ", i))
-    
-    # filter
-    buffers_i <- buffers[i, ]
-    
-    # crop e mask
-    paisagens_list[[i]] <- uso_raster %>% 
-        raster::crop(buffers_i) %>% 
-        raster::mask(buffers_i)
-    
-}
-
-paisagens_list
-
-# mapas
-cores <- data.frame(val = freq(uso_raster)[1:5, 1],
-                    col =  c("blue", "orange", "gray", "forestgreen", "green"))
-cores
-
-for(i in 1:10){
-    
-    # nomes
-    nome_paisagem <- paste0("map_pai", i)
-    nome_floresta <- paste0("map_for", i)
-    
-    # mapas
-    assign(nome_paisagem, 
-           tm_shape(paisagens_list[[i]]) +
-               tm_raster(style = "cat", legend.show = FALSE,
-                         palette = cores[cores$val %in% freq(paisagens_list[[i]])[, 1], 2]) +
-               tm_shape(buffers[i, ]) +
-               tm_borders(col = "red", lwd = 2) +
-               tm_shape(amost_vetor) +
-               tm_dots(size = .7, shape = 20, alpha = .7) +
-               tm_layout(main.title = names(paisagens_list)[i])
-    )
-    
-    assign(nome_floresta, 
-           tm_shape(raster::reclassify(x = paisagens_list[[i]], rcl = c(0,3,NA, 3,4,1, 4,6,NA))) +
-               tm_raster(legend.show = FALSE,
-                         pal = "forestgreen") +
-               tm_shape(buffers[i, ]) +
-               tm_borders(col = "red", lwd = 2) +
-               tm_shape(amost_vetor) +
-               tm_dots(size = .7, shape = 20, alpha = .7) +
-               tm_layout(main.title = names(paisagens_list)[i])
-    )
-    
-}
-
-# todos os mapas
-tmap::tmap_arrange(map_pai1, map_pai2, map_pai3, map_pai4, map_pai5, map_pai6, 
-                   map_pai7, map_pai8, map_pai9, map_pai10)
-
-tmap::tmap_arrange(map_for1, map_for2, map_for3, map_for4, map_for5, map_for6, 
-                   map_for7, map_for8, map_for9, map_for10)
+tm_shape(mapbiomas2023_santa_maria) +
+    tm_raster(col = "brasil_coverage_2023", 
+              col.scale = tm_scale_categorical(values = mapbiomas2023_santa_maria_classes$color,
+                                               labels = paste0(mapbiomas2023_santa_maria_classes$value, "-", mapbiomas2023_santa_maria_classes$class)),
+              col.legend = tm_legend(title = "Uso e cobertura 2023",
+                                     position = tm_pos_out("right", "center")))
 
 # checar o raster --------------------------------------------------------
 
-# checar o raster
-landscapemetrics::check_landscape(paisagens_list)
+## checar o raster ----
+landscapemetrics::check_landscape(mapbiomas1985_santa_maria)
+landscapemetrics::check_landscape(mapbiomas2023_santa_maria)
 
 #' prerequisitos do raster
 #' 1. sistema de referencias de coordenadas e projetada (crs)
@@ -179,12 +107,24 @@ landscapemetrics::check_landscape(paisagens_list)
 #' 3. classes como valores inteiros (class)
 #' 4. numero de classes (n_class)
 
+## reprojetar ----
+mapbiomas1985_santa_maria_utm <- terra::project(mapbiomas1985_santa_maria, "EPSG:32722", method = "near")
+mapbiomas1985_santa_maria_utm
+
+mapbiomas2023_santa_maria_utm <- terra::project(mapbiomas2023_santa_maria, "EPSG:32722", method = "near")
+mapbiomas2023_santa_maria_utm
+
+## checar novamente o raster ----
+landscapemetrics::check_landscape(mapbiomas1985_santa_maria_utm)
+landscapemetrics::check_landscape(mapbiomas2023_santa_maria_utm)
+
 # listar as metricas ------------------------------------------------------
-# metricas
+
+## metricas ----
 all_metrics <- landscapemetrics::list_lsm()
 all_metrics
 
-# patch metrics
+## patch metrics ----
 patch_metrics <- landscapemetrics::list_lsm() %>%
     dplyr::filter(level == "patch") %>% 
     dplyr::arrange(type)
@@ -219,11 +159,8 @@ landscape_metrics_type
 # mapas -------------------------------------------------------------------
 
 # plotar paisagem e metricas
-landscapemetrics::show_patches(landscape = paisagens_list[[1]], 
-                               class = 4, directions = 8)
-
-landscapemetrics::show_patches(landscape = paisagens_list[[1]],
-                               class = 4, directions = 4)
+landscapemetrics::show_patches(landscape = mapbiomas1985_santa_maria_utm, class = 12, directions = 8)
+landscapemetrics::show_patches(landscape = mapbiomas1985_santa_maria_utm, class = 12, directions = 4)
 
 landscapemetrics::show_cores(landscape = paisagens_list[[1]], 
                              class = 4, edge_depth = 1)
@@ -408,128 +345,5 @@ tm_shape(metricas_multiplas_escalas[metricas_multiplas_escalas$layer == 1 &
     tm_borders(col = "red")  +
     tm_shape(amost_vetor[1, ]) +
     tm_bubbles()
-
-# multifit -----------------------------------------------------------------
-
-# numero de especies por paisagem
-n_sp <- tibble::tibble(id = 1:10, s = c(5, 3, 6, 5, 3, 2, 1, 10, 7, 4))
-n_sp
-
-# preparar os dados numero de manchas
-data_np <- metricas_multiplas_escalas %>% 
-    dplyr::filter(metric == "np",
-                  class == 4) %>% 
-    dplyr::mutate(value = ifelse(is.na(value), 0, value)) %>% 
-    tidyr::pivot_wider(id_cols = plot_id, 
-                       names_from = c(metric, buffer), 
-                       values_from = value) %>% 
-    dplyr::right_join(n_sp, ., by = c("id" = "plot_id"))
-data_np
-
-fits_np <- multifit(data = data_np,
-                    mod = "glm",
-                    args = c("family = poisson"),
-                    multief = colnames(data_np)[3:6], 
-                    formula = s ~ multief, 
-                    criterion = "AIC",
-                    plot_est = TRUE)
-fits_np
-
-fits_np$summary
-fits_np$plot
-fits_np$models
-
-# preparar os dados area
-data_area <- metricas_multiplas_escalas %>% 
-    dplyr::filter(metric == "area_mn",
-                  class == 4) %>% 
-    dplyr::mutate(value = ifelse(is.na(value), 0, value)) %>% 
-    tidyr::pivot_wider(id_cols = plot_id, 
-                       names_from = c(metric, buffer), 
-                       values_from = value) %>% 
-    dplyr::right_join(n_sp, ., by = c("id" = "plot_id"))
-data_area
-
-fits_area <- multifit(data = data_area,
-                      mod = "glm", 
-                      multief = colnames(data_area)[3:6], 
-                      formula = s ~ multief, 
-                      criterion = "AIC",
-                      plot_est = TRUE)
-fits_area
-
-fits_area$summary
-fits_area$plot
-fits_area$models
-
-# preparar os dados pland
-data_pland <- metricas_multiplas_escalas %>% 
-    dplyr::filter(metric == "pland",
-                  class == 4) %>% 
-    dplyr::mutate(value = ifelse(is.na(value), 0, value)) %>% 
-    tidyr::pivot_wider(id_cols = plot_id, 
-                       names_from = c(metric, buffer), 
-                       values_from = value) %>% 
-    dplyr::right_join(n_sp, ., by = c("id" = "plot_id"))
-data_pland
-
-fits_pland <- multifit(data = data_pland,
-                       mod = "glm", 
-                       multief = colnames(data_pland)[3:6], 
-                       formula = s ~ multief, 
-                       criterion = "AIC",
-                       plot_est = TRUE)
-fits_pland
-
-fits_pland$summary
-fits_pland$plot
-fits_pland$models
-
-
-# modelos finais
-fits_np$models$np_100
-fits_area$models$area_mn_200
-fits_pland$models$pland_500
-
-broom::tidy(fits_np$models$np_100)
-broom::tidy(fits_area$models$area_mn_200)
-broom::tidy(fits_pland$models$pland_500)
-
-# aicc
-aic <- bbmle::ICtab(fits_np$models$np_100,
-                    fits_area$models$area_mn_200,
-                    fits_pland$models$pland_500, 
-                    type = "AICc",
-                    weights = TRUE,
-                    delta = TRUE,
-                    logLik = TRUE,
-                    sort = TRUE,
-                    nobs = 10)
-aic
-
-# graficos
-ggplot(data = data_pland) +
-    aes(x = pland_500, y = s) +
-    stat_smooth(method = "glm", method.args = list(family = "poisson"), col = "black", level = .95) +
-    geom_point(shape = 21, size = 5, col = "black", fill = "blue", alpha = .8) +
-    theme_classic() +
-    labs(x = "Porcentagem de habitat (%) - 500 m", y = "Número de espécies") +
-    theme(axis.title = element_text(size = 24),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12))
-
-ggplot(data = data_area) +
-    aes(x = area_mn_200, y = s) +
-    stat_smooth(method = "glm", method.args = list(family = "poisson"), col = "black", level = .95) +
-    geom_point(shape = 21, size = 5, col = "black", fill = "forestgreen", alpha = .8) +
-    theme_classic() +
-    labs(x = "Área média das manchas (ha) - 200 m", y = "Número de espécies") +
-    theme(axis.title = element_text(size = 24),
-          axis.text.x = element_text(size = 20),
-          axis.text.y = element_text(size = 20),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12))
 
 # end ---------------------------------------------------------------------
