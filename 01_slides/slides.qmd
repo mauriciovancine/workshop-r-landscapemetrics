@@ -1,5 +1,5 @@
 ---
-title: "Introdução à métricas de paisagem no R"
+title: "Introdução a métricas de paisagem no R"
 subtitle: "<br> SynEco - I Simpósio Brasileiro de Síntese Ecológica"
 author: "<br> [Maurício Vancine](https://mauriciovancine.github.io/) • [lab.exe/Unicamp](https://www.mathiasmpires.net.br)"
 date: "11/27/2024"
