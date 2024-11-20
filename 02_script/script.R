@@ -64,47 +64,55 @@ santa_maria <- terra::vect("03_data/santa_maria.shp")
 santa_maria
 
 ## importar raster ----
-mapbiomas1985_santa_maria <- terra::rast("03_data/mapbiomas1985_santa_maria.tif") %>% 
+mapbiomas_1985_santa_maria <- terra::rast("03_data/mapbiomas1985_santa_maria.tif") %>% 
     terra::crop(santa_maria, mask = TRUE)
-names(mapbiomas1985_santa_maria) <- "santamaria_1985"
-mapbiomas1985_santa_maria
+names(mapbiomas_1985_santa_maria) <- "santamaria_1985"
+mapbiomas_1985_santa_maria
 
-mapbiomas2023_santa_maria <- terra::rast("03_data/mapbiomas2023_santa_maria.tif") %>% 
+mapbiomas_2023_santa_maria <- terra::rast("03_data/mapbiomas2023_santa_maria.tif") %>% 
     terra::crop(santa_maria, mask = TRUE)
-names(mapbiomas2023_santa_maria) <- "santamaria_2023"
-mapbiomas2023_santa_maria
+names(mapbiomas_2023_santa_maria) <- "santamaria_2023"
+mapbiomas_2023_santa_maria
 
 ## classes
-mapbiomas1985_santa_maria_classes <- terra::freq(mapbiomas1985_santa_maria) %>% 
+mapbiomas_1985_santa_maria_classes <- terra::freq(mapbiomas_1985_santa_maria) %>% 
     dplyr::left_join(mapbiomas_legend) %>% 
     dplyr::arrange(value)
-mapbiomas1985_santa_maria_classes
+mapbiomas_1985_santa_maria_classes
 
-mapbiomas2023_santa_maria_classes <- terra::freq(mapbiomas2023_santa_maria) %>% 
+mapbiomas_2023_santa_maria_classes <- terra::freq(mapbiomas_2023_santa_maria) %>% 
     dplyr::left_join(mapbiomas_legend) %>% 
     dplyr::arrange(value)
-mapbiomas2023_santa_maria_classes
+mapbiomas_2023_santa_maria_classes
 
 # plot - vai demorar um pouco...
-tm_shape(mapbiomas1985_santa_maria) +
+map_lulc_1985 <- tm_shape(mapbiomas_1985_santa_maria) +
     tm_raster(col = "santamaria_1985", 
-              col.scale = tm_scale_categorical(values = mapbiomas1985_santa_maria_classes$color,
-                                               labels = paste0(mapbiomas1985_santa_maria_classes$value, "-", mapbiomas1985_santa_maria_classes$class)),
+              col.scale = tm_scale_categorical(values = mapbiomas_1985_santa_maria_classes$color,
+                                               labels = paste0(mapbiomas_1985_santa_maria_classes$value, "-", mapbiomas_1985_santa_maria_classes$class)),
               col.legend = tm_legend(title = "Uso e cobertura 1985",
-                                     position = tm_pos_out("right", "center")))
+                                     position = tm_pos_out("right", "center"))) +
+    tm_compass(size = 3, position = c(.9, .2)) +
+    tm_scalebar(text.size = 1, breaks = c(0, 5, 10), position = c(.75, .1))
+map_lulc_1985
+tmap_save(map_lulc_1985, "04_results/map_1985_lulc.png", width = 30, height = 20, units = "cm", dpi = 300)
 
-tm_shape(mapbiomas2023_santa_maria) +
+map_lulc_2023 <- tm_shape(mapbiomas_2023_santa_maria) +
     tm_raster(col = "santamaria_2023", 
-              col.scale = tm_scale_categorical(values = mapbiomas2023_santa_maria_classes$color,
-                                               labels = paste0(mapbiomas2023_santa_maria_classes$value, "-", mapbiomas2023_santa_maria_classes$class)),
+              col.scale = tm_scale_categorical(values = mapbiomas_2023_santa_maria_classes$color,
+                                               labels = paste0(mapbiomas_2023_santa_maria_classes$value, "-", mapbiomas_2023_santa_maria_classes$class)),
               col.legend = tm_legend(title = "Uso e cobertura 2023",
-                                     position = tm_pos_out("right", "center")))
+                                     position = tm_pos_out("right", "center"))) +
+    tm_compass(size = 3, position = c(.9, .2)) +
+    tm_scalebar(text.size = 1, breaks = c(0, 5, 10), position = c(.75, .1))
+map_lulc_2023
+tmap_save(map_lulc_2023, "04_results/map_2023_lulc.png", width = 30, height = 20, units = "cm", dpi = 300)
 
 # checar o raster --------------------------------------------------------
 
 ## checar o raster ----
-landscapemetrics::check_landscape(mapbiomas1985_santa_maria)
-landscapemetrics::check_landscape(mapbiomas2023_santa_maria)
+landscapemetrics::check_landscape(mapbiomas_1985_santa_maria)
+landscapemetrics::check_landscape(mapbiomas_2023_santa_maria)
 
 #' prerequisitos do raster
 #' 1. sistema de referencias de coordenadas e projetada (crs)
@@ -113,20 +121,33 @@ landscapemetrics::check_landscape(mapbiomas2023_santa_maria)
 #' 4. numero de classes (n_class)
 
 ## reprojetar ----
-mapbiomas1985_santa_maria_utm <- terra::project(mapbiomas1985_santa_maria, "EPSG:32722", method = "near")
-mapbiomas1985_santa_maria_utm
+mapbiomas_1985_santa_maria_utm <- terra::project(mapbiomas_1985_santa_maria, "EPSG:32722", method = "near")
+mapbiomas_1985_santa_maria_utm
 
-mapbiomas2023_santa_maria_utm <- terra::project(mapbiomas2023_santa_maria, "EPSG:32722", method = "near")
-mapbiomas2023_santa_maria_utm
+plot(mapbiomas_1985_santa_maria)
+plot(mapbiomas_1985_santa_maria_utm)
+
+mapbiomas_2023_santa_maria_utm <- terra::project(mapbiomas_2023_santa_maria, "EPSG:32722", method = "near")
+mapbiomas_2023_santa_maria_utm
+
+plot(mapbiomas_2023_santa_maria)
+plot(mapbiomas_2023_santa_maria_utm)
 
 ## checar novamente o raster ----
-landscapemetrics::check_landscape(mapbiomas1985_santa_maria_utm)
-landscapemetrics::check_landscape(mapbiomas2023_santa_maria_utm)
+landscapemetrics::check_landscape(mapbiomas_1985_santa_maria_utm)
+landscapemetrics::check_landscape(mapbiomas_2023_santa_maria_utm)
+
+## reprojetar vetor ----
+santa_maria_utm <- terra::project(santa_maria, "EPSG:32722")
+santa_maria_utm
+
+plot(santa_maria, col = "gray")
+plot(santa_maria_utm, col = "gray")
 
 # diagrama de sankey ------------------------------------------------------
 
-# prepare data
-mapbiomas_1985_2023_santa_maria_utm <- c(mapbiomas1985_santa_maria_utm, mapbiomas2023_santa_maria_utm) %>% 
+## preparar dados ----
+mapbiomas_1985_2023_santa_maria_utm <- c(mapbiomas_1985_santa_maria_utm, mapbiomas_2023_santa_maria_utm) %>% 
     raster::stack()
 mapbiomas_1985_2023_santa_maria_utm
 
@@ -141,15 +162,12 @@ ct$totalArea
 ct$totalInterval
 
 # ajuste dos nomes das classes
-tb_legend <- ct$tb_legend %>% 
+tb_legend <- ct$tb_legend %>%
+    dplyr::select(-color) %>% 
     dplyr::left_join(mapbiomas_legend, by = c("categoryValue" = "value")) %>% 
     dplyr::mutate(categoryValue = as.integer(categoryValue),
-                  color.x = color.y) %>% 
-    dplyr::rename(color = color.x) %>% 
-    dplyr::select(-class, -color.y)
-tb_legend
-
-tb_legend <- tb_legend %>% 
+                  categoryName = as.factor(class)) %>% 
+    dplyr::select(-class) %>% 
     dplyr::mutate(categoryName = c("nd", "ff", "sil", "ca", "fc", "pas", "mos", 
                                    "urb", "nveg", "agua", "soja", "arroz", "temp")) %>% 
     dplyr::mutate(categoryName = as.factor(categoryName))
@@ -215,23 +233,26 @@ landscape_metrics_type
 #' 4. todas as funcoes funcionam para rasterlayers, rasterstack/rasterbrick ou list
 #' 5. algumas funcoes permitem add parametros: edge depth ou cell neighbourhood rule
 
-# area no nivel de mancha (patch - p)
-mapbiomas1985_santa_maria_utm_area_p <- landscapemetrics::lsm_p_area(landscape = mapbiomas1985_santa_maria_utm)
-mapbiomas1985_santa_maria_utm_area_p
 
-mapbiomas2023_santa_maria_utm_area_p <- landscapemetrics::lsm_p_area(landscape = mapbiomas2023_santa_maria_utm)
-mapbiomas2023_santa_maria_utm_area_p
+## area no nivel de mancha (patch - p) ----
+mapbiomas_1985_santa_maria_utm_area_p <- landscapemetrics::lsm_p_area(landscape = mapbiomas_1985_santa_maria_utm)
+mapbiomas_1985_santa_maria_utm_area_p
 
-# area no nivel de classe (class - c)
-mapbiomas1985_santa_maria_utm_area_c <- landscapemetrics::lsm_c_area_mn(landscape = mapbiomas1985_santa_maria_utm)
-mapbiomas1985_santa_maria_utm_area_c
+mapbiomas_2023_santa_maria_utm_area_p <- landscapemetrics::lsm_p_area(landscape = mapbiomas_2023_santa_maria_utm)
+mapbiomas_2023_santa_maria_utm_area_p
 
-mapbiomas2023_santa_maria_utm_area_c <- landscapemetrics::lsm_c_area_mn(landscape = mapbiomas2023_santa_maria_utm)
-mapbiomas2023_santa_maria_utm_area_c
 
-# area no nivel de paisagem (landscape - l)
-mapbiomas1985_santa_maria_utm_area_l <- landscapemetrics::lsm_l_area_mn(landscape = mapbiomas1985_santa_maria_utm)
-mapbiomas1985_santa_maria_utm_area_l
+## area no nivel de classe (class - c) ----
+mapbiomas_1985_santa_maria_utm_area_c <- landscapemetrics::lsm_c_area_mn(landscape = mapbiomas_1985_santa_maria_utm)
+mapbiomas_1985_santa_maria_utm_area_c
+
+mapbiomas_2023_santa_maria_utm_area_c <- landscapemetrics::lsm_c_area_mn(landscape = mapbiomas_2023_santa_maria_utm)
+mapbiomas_2023_santa_maria_utm_area_c
+
+
+## area no nivel de paisagem (landscape - l) ----
+mapbiomas_1985_santa_maria_utm_area_l <- landscapemetrics::lsm_l_area_mn(landscape = mapbiomas_1985_santa_maria_utm)
+mapbiomas_1985_santa_maria_utm_area_l
 
 # calcular todas as metricas por nivel ------------------------------------
 
@@ -240,92 +261,160 @@ mapbiomas1985_santa_maria_utm_area_l
 #' facilita a entrada de parametros
 #' permite escolha por ‘level’, ‘metric’, ‘name’, ‘type’, ‘what’
 
-# calcular multiplas metricas
-lsm_multiplas_metricas_1985 <- landscapemetrics::calculate_lsm(landscape = mapbiomas1985_santa_maria_utm, 
-                                                               metric = c("area", "core", "enn"), 
-                                                               level = "class",
-                                                               edge_depth = 1, # borda
-                                                               neighbourhood = 8, # oito celulas nas vizinhancas
-                                                               full_name = TRUE, 
-                                                               verbose = TRUE, 
-                                                               progress = TRUE)
+## calcular multiplas metricas ----
+lsm_multiplas_metricas_1985 <- landscapemetrics::calculate_lsm(
+    landscape = mapbiomas_1985_santa_maria_utm, 
+    metric = c("area", "core", "enn"), 
+    level = "class",
+    edge_depth = 1, # borda
+    neighbourhood = 8, # oito celulas nas vizinhancas
+    full_name = TRUE, 
+    verbose = TRUE, 
+    progress = TRUE)
 lsm_multiplas_metricas_1985
 
-lsm_multiplas_metricas_2023 <- landscapemetrics::calculate_lsm(landscape = mapbiomas2023_santa_maria_utm, 
-                                                               metric = c("area", "core", "enn"), 
-                                                               level = "class",
-                                                               edge_depth = 1, # borda
-                                                               neighbourhood = 8, # oito celulas nas vizinhancas
-                                                               full_name = TRUE, 
-                                                               verbose = TRUE, 
-                                                               progress = TRUE)
+lsm_multiplas_metricas_2023 <- landscapemetrics::calculate_lsm(
+    landscape = mapbiomas_2023_santa_maria_utm, 
+    metric = c("area", "core", "enn"), 
+    level = "class",
+    edge_depth = 1, # borda
+    neighbourhood = 8, # oito celulas nas vizinhancas
+    full_name = TRUE, 
+    verbose = TRUE, 
+    progress = TRUE)
 lsm_multiplas_metricas_2023
+
+## variacao temporal ----
+lsm_multiplas_metricas_1985_filter <- lsm_multiplas_metricas_1985 %>% 
+    dplyr::filter(class %in% c(3, 12),
+                  metric %in% c("area_mn", "core_mn", "enn_mn")) %>% 
+    dplyr::mutate(year = "metric_1985") %>% 
+    dplyr::select(year, class, metric, value)
+lsm_multiplas_metricas_1985_filter
+
+lsm_multiplas_metricas_2023_filter <- lsm_multiplas_metricas_2023 %>% 
+    dplyr::filter(class %in% c(3, 12),
+                  metric %in% c("area_mn", "core_mn", "enn_mn")) %>% 
+    dplyr::mutate(year = "metric_2023") %>% 
+    dplyr::select(year, class, metric, value)
+lsm_multiplas_metricas_2023_filter
+
+lsm_multiplas_metricas_temporal <- lsm_multiplas_metricas_1985_filter %>% 
+    dplyr::bind_rows(lsm_multiplas_metricas_2023_filter) %>% 
+    dplyr::mutate(class = case_when(class == 3 ~ "forest",
+                                    class == 12 ~ "grassland")) %>% 
+    tidyr::pivot_wider(names_from = year, values_from = value) %>% 
+    dplyr::rowwise() %>% 
+    dplyr::mutate(variation = (metric_2023 - metric_1985)/metric_1985 * 100)
+lsm_multiplas_metricas_temporal
+
+writexl::write_xlsx(lsm_multiplas_metricas_temporal, "04_results/lsm_multiplas_metricas_temporal.xlsx")
 
 # espacializar as metricas ------------------------------------
 
-# reclassificar
-mapbiomas1985_santa_maria_utm_forest <- terra::ifel(mapbiomas1985_santa_maria_utm == 3, 1, NA)
-mapbiomas1985_santa_maria_utm_forest
-plot(mapbiomas1985_santa_maria_utm_forest, col = "forestgreen")
+## reclassificar ----
+mapbiomas_1985_santa_maria_utm_forest <- terra::ifel(mapbiomas_1985_santa_maria_utm == 3, 1, NA)
+mapbiomas_1985_santa_maria_utm_forest
 
-mapbiomas1985_santa_maria_utm_grassland <- terra::ifel(mapbiomas1985_santa_maria_utm == 12, 1, NA)
-mapbiomas1985_santa_maria_utm_grassland
-plot(mapbiomas1985_santa_maria_utm_grassland, col = "orange")
+plot(mapbiomas_1985_santa_maria_utm_forest, col = "forestgreen", legend = FALSE)
+plot(santa_maria_utm, add = TRUE)
 
-mapbiomas2023_santa_maria_utm_forest <- terra::ifel(mapbiomas2023_santa_maria_utm == 3, 1, NA)
-mapbiomas2023_santa_maria_utm_forest
-plot(mapbiomas2023_santa_maria_utm_forest, col = "forestgreen")
+mapbiomas_1985_santa_maria_utm_grassland <- terra::ifel(mapbiomas_1985_santa_maria_utm == 12, 1, NA)
+mapbiomas_1985_santa_maria_utm_grassland
 
-mapbiomas2023_santa_maria_utm_grassland <- terra::ifel(mapbiomas2023_santa_maria_utm == 12, 1, NA)
-mapbiomas2023_santa_maria_utm_grassland
-plot(mapbiomas2023_santa_maria_utm_grassland, col = "orange")
+plot(mapbiomas_1985_santa_maria_utm_grassland, col = "orange", legend = FALSE)
+plot(santa_maria_utm, add = TRUE)
 
-# calcular e espacializar
-mapbiomas1985_santa_maria_utm_forest_area <- landscapemetrics::spatialize_lsm(
-    landscape = mapbiomas1985_santa_maria_utm_forest,
+mapbiomas_2023_santa_maria_utm_forest <- terra::ifel(mapbiomas_2023_santa_maria_utm == 3, 1, NA)
+mapbiomas_2023_santa_maria_utm_forest
+
+plot(mapbiomas_2023_santa_maria_utm_forest, col = "forestgreen", legend = FALSE)
+plot(santa_maria_utm, add = TRUE)
+
+mapbiomas_2023_santa_maria_utm_grassland <- terra::ifel(mapbiomas_2023_santa_maria_utm == 12, 1, NA)
+mapbiomas_2023_santa_maria_utm_grassland
+
+plot(mapbiomas_2023_santa_maria_utm_grassland, col = "orange", legend = FALSE)
+plot(santa_maria_utm, add = TRUE)
+
+
+## calcular e espacializar as metricas ----
+mapbiomas_1985_santa_maria_utm_forest_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas_1985_santa_maria_utm_forest,
     metric = "area",
     progress = TRUE)
-mapbiomas1985_santa_maria_utm_forest_area
+mapbiomas_1985_santa_maria_utm_forest_area
 
-mapbiomas1985_santa_maria_utm_grassland_area <- landscapemetrics::spatialize_lsm(
-    landscape = mapbiomas1985_santa_maria_utm_forest,
+mapbiomas_1985_santa_maria_utm_grassland_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas_1985_santa_maria_utm_grassland,
     metric = "area",
     progress = TRUE)
-mapbiomas1985_santa_maria_utm_forest_area
+mapbiomas_1985_santa_maria_utm_grassland_area
 
-mapbiomas2023_santa_maria_utm_forest_area <- landscapemetrics::spatialize_lsm(
-    landscape = mapbiomas2023_santa_maria_utm_forest,
+
+mapbiomas_2023_santa_maria_utm_forest_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas_2023_santa_maria_utm_forest,
     metric = "area",
     progress = TRUE)
-mapbiomas2023_santa_maria_utm_forest_area
+mapbiomas_2023_santa_maria_utm_forest_area
 
-mapbiomas2023_santa_maria_utm_grassland_area <- landscapemetrics::spatialize_lsm(
-    landscape = mapbiomas2023_santa_maria_utm_grassland,
+mapbiomas_2023_santa_maria_utm_grassland_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas_2023_santa_maria_utm_grassland,
     metric = "area",
     progress = TRUE)
-mapbiomas2023_santa_maria_utm_grassland_area
+mapbiomas_2023_santa_maria_utm_grassland_area
 
-# mapa
-tm_shape(mapbiomas1985_santa_maria_utm_forest_area$layer_1$lsm_p_area) +
+## mapas ----
+map_1985_forest_area <- tm_shape(mapbiomas_1985_santa_maria_utm_forest_area$layer_1$lsm_p_area) +
     tm_raster(col = "value", 
               col.scale = tm_scale_continuous_log10(values = "matplotlib.greens"),
               col.legend = tm_legend(title = "Área (ha)",
                                      position = tm_pos_out("right", "center"), 
-                                     reverse = TRUE))
+                                     reverse = TRUE)) +
+    tm_shape(santa_maria_utm) +
+    tm_borders() +
+    tm_compass(size = 3, position = c(.9, .2)) +
+    tm_scalebar(text.size = 1, breaks = c(0, 5, 10), position = c(.75, .1))
+map_1985_forest_area
+tmap_save(map_1985_forest_area, "04_results/map_1985_forest_area.png", width = 30, height = 20, units = "cm", dpi = 300)
 
-tm_shape(mapbiomas1985_santa_maria_utm_grassland_area$layer_1$lsm_p_area) +
+map_1985_grassland_area <- tm_shape(mapbiomas_1985_santa_maria_utm_grassland_area$layer_1$lsm_p_area) +
     tm_raster(col = "value", 
-              col.scale = tm_scale_continuous_log10(values = "Oranges"),
+              col.scale = tm_scale_continuous_log10(values = "matplotlib.oranges"),
               col.legend = tm_legend(title = "Área (ha)",
                                      position = tm_pos_out("right", "center"), 
-                                     reverse = TRUE))
+                                     reverse = TRUE)) +
+    tm_shape(santa_maria_utm) +
+    tm_borders() +
+    tm_compass(size = 3, position = c(.9, .2)) +
+    tm_scalebar(text.size = 1, breaks = c(0, 5, 10), position = c(.75, .1))
+map_1985_grassland_area
+tmap_save(map_1985_grassland_area, "04_results/map_1985_grassland_area.png", width = 30, height = 20, units = "cm", dpi = 300)
 
-tm_shape(mapbiomas2023_santa_maria_utm_habitat_area$layer_1$lsm_p_area) +
+map_2023_forest_area <- tm_shape(mapbiomas_2023_santa_maria_utm_forest_area$layer_1$lsm_p_area) +
     tm_raster(col = "value", 
-              col.scale = tm_scale_continuous_log10(values = "viridis"),
+              col.scale = tm_scale_continuous_log10(values = "matplotlib.greens"),
               col.legend = tm_legend(title = "Área (ha)",
                                      position = tm_pos_out("right", "center"), 
-                                     reverse = TRUE))
+                                     reverse = TRUE)) +
+    tm_shape(santa_maria_utm) +
+    tm_borders() +
+    tm_compass(size = 3, position = c(.9, .2)) +
+    tm_scalebar(text.size = 1, breaks = c(0, 5, 10), position = c(.75, .1))
+map_2023_forest_area
+tmap_save(map_2023_forest_area, "04_results/map_2023_forest_area.png", width = 30, height = 20, units = "cm", dpi = 300)
 
+map_2023_grassland_area <- tm_shape(mapbiomas_2023_santa_maria_utm_grassland_area$layer_1$lsm_p_area) +
+    tm_raster(col = "value", 
+              col.scale = tm_scale_continuous_log10(values = "matplotlib.oranges"),
+              col.legend = tm_legend(title = "Área (ha)",
+                                     position = tm_pos_out("right", "center"), 
+                                     reverse = TRUE)) +
+    tm_shape(santa_maria_utm) +
+    tm_borders() +
+    tm_compass(size = 3, position = c(.9, .2)) +
+    tm_scalebar(text.size = 1, breaks = c(0, 5, 10), position = c(.75, .1))
+map_2023_grassland_area
+tmap_save(map_2023_grassland_area, "04_results/map_2023_grassland_area.png", width = 30, height = 20, units = "cm", dpi = 300)
 
 # end ---------------------------------------------------------------------
