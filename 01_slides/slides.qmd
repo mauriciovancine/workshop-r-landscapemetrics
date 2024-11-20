@@ -1484,12 +1484,11 @@ Visualização gráfica que representa **fluxos de dados ou quantidades** entre 
 
 **Mudanças** nas classes de uso e cobertura da terra
 
-<center>
-<img src="img/sankey_diagram_lulc.png" style="width:65%"/>
-</center>
+![](img/sankey1.png){.absolute width=65% right=450 top=170}
+![](img/sankey2.png){.absolute width=48% right=-100 top=140}
 
 :::footer
-[Wang et al. (2022)](https://doi.org/10.1016/j.ecolind.2022.109539)
+[Dutra et al. (2023)](https://doi.org/10.26848/rbgf.v16.2.p936-949)
 :::
 
 ## OpenLand
@@ -1716,7 +1715,19 @@ Apenas para as métricas calculadas para manchas
 [landscapemetrics](https://github.com/mauriciovancine/workshop-landscapemetrics), [Hesselbarth et al. (2019)](https://onlinelibrary.wiley.com/doi/full/10.1111/ecog.04617)
 :::
 
-## Material
+## Para saber mais
+
+**Live de métricas de paisagem no R**
+
+<center>
+<img src="img/live.png" style="width:85%"/>
+</center>
+
+:::footer
+[YouTube](https://www.youtube.com/live/RCTrLx_33D8?si=rD3q0tHl3ynf3Fbe)
+:::
+
+## Para saber mais
 
 ::: {style="font-size: 52%;"}
 - [Bivand, R. S., Pebesma, E., & Gómez-Rubio, V. (2013). Applied Spatial Data Analysis with R. Springer New York.](https://doi.org/10.1007/978-1-4614-7618-4)

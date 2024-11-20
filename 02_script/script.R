@@ -10,9 +10,12 @@
 if(!require(tidyverse)) install.packages("tidyverse")
 if(!require(pdftools)) install.packages("pdftools")
 if(!require(geobr)) install.packages("geobr")
+if(!require(raster)) install.packages("raster")
 if(!require(terra)) install.packages("terra")
 if(!require(remotes)) install.packages("remotes")
 if(!require(OpenLand)) remotes::install_github("reginalexavier/OpenLand")
+if(!require(networkD3)) install.packages("networkD3")
+if(!require(webshot2)) install.packages("webshot2")
 if(!require(landscapemetrics)) install.packages("landscapemetrics")
 # if(require(tmap)) remove.packages("r-tmap/tmap")
 if(!require(tmap)) install_github("r-tmap/tmap")
@@ -47,7 +50,7 @@ mapbiomas_legend <- pdftools::pdf_text("03_data/Legenda-Colecao-9-LEGEND-CODE_v2
     dplyr::rename(class = 1, value = 2, color = 3) %>% 
     dplyr::mutate(value = as.numeric(value),
                   class = str_trim(str_replace_all(class, "[0-9\\.]", ""))) %>% 
-    dplyr::bind_rows(tibble::tibble(class = "Não definido", value = 0, color = "gray"))
+    dplyr::bind_rows(tibble::tibble(class = "Não definido", value = 0, color = "#c3c3c3"))
 mapbiomas_legend
 
 ## limite santa maria ----
@@ -56,17 +59,19 @@ santa_maria <- geobr::read_municipality(code_muni = 4316907, year = 2020) %>%
     terra::vect()
 santa_maria
 
-## importar
+## importar vetor ----
 santa_maria <- terra::vect("03_data/santa_maria.shp")
 santa_maria
 
-## importar ----
+## importar raster ----
 mapbiomas1985_santa_maria <- terra::rast("03_data/mapbiomas1985_santa_maria.tif") %>% 
     terra::crop(santa_maria, mask = TRUE)
+names(mapbiomas1985_santa_maria) <- "santamaria_1985"
 mapbiomas1985_santa_maria
 
 mapbiomas2023_santa_maria <- terra::rast("03_data/mapbiomas2023_santa_maria.tif") %>% 
     terra::crop(santa_maria, mask = TRUE)
+names(mapbiomas2023_santa_maria) <- "santamaria_2023"
 mapbiomas2023_santa_maria
 
 ## classes
@@ -82,14 +87,14 @@ mapbiomas2023_santa_maria_classes
 
 # plot - vai demorar um pouco...
 tm_shape(mapbiomas1985_santa_maria) +
-    tm_raster(col = "brasil_coverage_1985", 
+    tm_raster(col = "santamaria_1985", 
               col.scale = tm_scale_categorical(values = mapbiomas1985_santa_maria_classes$color,
                                                labels = paste0(mapbiomas1985_santa_maria_classes$value, "-", mapbiomas1985_santa_maria_classes$class)),
               col.legend = tm_legend(title = "Uso e cobertura 1985",
                                      position = tm_pos_out("right", "center")))
 
 tm_shape(mapbiomas2023_santa_maria) +
-    tm_raster(col = "brasil_coverage_2023", 
+    tm_raster(col = "santamaria_2023", 
               col.scale = tm_scale_categorical(values = mapbiomas2023_santa_maria_classes$color,
                                                labels = paste0(mapbiomas2023_santa_maria_classes$value, "-", mapbiomas2023_santa_maria_classes$class)),
               col.legend = tm_legend(title = "Uso e cobertura 2023",
@@ -120,9 +125,48 @@ landscapemetrics::check_landscape(mapbiomas2023_santa_maria_utm)
 
 # diagrama de sankey ------------------------------------------------------
 
-# 
+# prepare data
+mapbiomas_1985_2023_santa_maria_utm <- c(mapbiomas1985_santa_maria_utm, mapbiomas2023_santa_maria_utm) %>% 
+    raster::stack()
+mapbiomas_1985_2023_santa_maria_utm
 
+## tabela de contingencia ----
+ct <- OpenLand::contingencyTable(input_raster = mapbiomas_1985_2023_santa_maria_utm)
+ct
 
+ct$lulc_Multistep
+ct$lulc_Onestep
+ct$tb_legend
+ct$totalArea
+ct$totalInterval
+
+# ajuste dos nomes das classes
+tb_legend <- ct$tb_legend %>% 
+    dplyr::left_join(mapbiomas_legend, by = c("categoryValue" = "value")) %>% 
+    dplyr::mutate(categoryValue = as.integer(categoryValue),
+                  color.x = color.y) %>% 
+    dplyr::rename(color = color.x) %>% 
+    dplyr::select(-class, -color.y)
+tb_legend
+
+tb_legend <- tb_legend %>% 
+    dplyr::mutate(categoryName = c("nd", "ff", "sil", "ca", "fc", "pas", "mos", 
+                                   "urb", "nveg", "agua", "soja", "arroz", "temp")) %>% 
+    dplyr::mutate(categoryName = as.factor(categoryName))
+tb_legend
+
+# diagrama de sankey
+diagrama_sankey <- sankeyLand(dataset = ct$lulc_Multistep,
+                              legendtable = tb_legend)
+diagrama_sankey
+
+# export .html
+networkD3::saveNetwork(diagrama_sankey, "04_results/diagrama_sankey.html")
+
+# export .png
+webshot2::webshot(url = "04_results/diagrama_sankey.html", 
+                  file = "04_results/diagrama_sankey.png", 
+                  vwidth = 1000, vheight = 900)
 
 # listar as metricas ------------------------------------------------------
 
@@ -140,7 +184,7 @@ patch_metrics %>%
     dplyr::group_by(type) %>% 
     dplyr::summarise(n = n())
 
-# class metrics
+## class metrics ----
 class_metrics <- landscapemetrics::list_lsm() %>%
     dplyr::filter(level == "class") %>% 
     dplyr::arrange(type)
@@ -151,7 +195,7 @@ class_metrics_type <- class_metrics %>%
     dplyr::summarise(n = n())
 class_metrics_type
 
-# landscape metrics
+## landscape metrics ----
 landscape_metrics <- landscapemetrics::list_lsm() %>%
     dplyr::filter(level == "landscape") %>% 
     dplyr::arrange(type)
@@ -161,21 +205,6 @@ landscape_metrics_type <- landscape_metrics %>%
     dplyr::group_by(type) %>% 
     dplyr::summarise(n = n())
 landscape_metrics_type
-
-# mapas -------------------------------------------------------------------
-
-# plotar paisagem e metricas
-landscapemetrics::show_patches(landscape = mapbiomas1985_santa_maria_utm, class = 12, directions = 8)
-landscapemetrics::show_patches(landscape = mapbiomas1985_santa_maria_utm, class = 12, directions = 4)
-
-landscapemetrics::show_cores(landscape = paisagens_list[[1]], 
-                             class = 4, edge_depth = 1)
-
-landscapemetrics::show_cores(landscape = paisagens_list[[1]], 
-                             class = 4, edge_depth = 2)
-
-landscapemetrics::show_lsm(landscape = paisagens_list[[1]], 
-                           what = "lsm_p_area", class = 4)
 
 # calcular as metricas ----------------------------------------------------
 
@@ -187,25 +216,22 @@ landscapemetrics::show_lsm(landscape = paisagens_list[[1]],
 #' 5. algumas funcoes permitem add parametros: edge depth ou cell neighbourhood rule
 
 # area no nivel de mancha (patch - p)
-paisagens_area_p <- landscapemetrics::lsm_p_area(landscape = paisagens_list[[1]])
-paisagens_area_p
+mapbiomas1985_santa_maria_utm_area_p <- landscapemetrics::lsm_p_area(landscape = mapbiomas1985_santa_maria_utm)
+mapbiomas1985_santa_maria_utm_area_p
 
-paisagens_area_p_all <- landscapemetrics::lsm_p_area(landscape = paisagens_list)
-paisagens_area_p_all
+mapbiomas2023_santa_maria_utm_area_p <- landscapemetrics::lsm_p_area(landscape = mapbiomas2023_santa_maria_utm)
+mapbiomas2023_santa_maria_utm_area_p
 
 # area no nivel de classe (class - c)
-paisagens_area_c <- landscapemetrics::lsm_c_area_mn(landscape = paisagens_list[[1]])
-paisagens_area_c
+mapbiomas1985_santa_maria_utm_area_c <- landscapemetrics::lsm_c_area_mn(landscape = mapbiomas1985_santa_maria_utm)
+mapbiomas1985_santa_maria_utm_area_c
 
-paisagens_area_c_all <- landscapemetrics::lsm_c_area_mn(landscape = paisagens_list)
-paisagens_area_c_all
+mapbiomas2023_santa_maria_utm_area_c <- landscapemetrics::lsm_c_area_mn(landscape = mapbiomas2023_santa_maria_utm)
+mapbiomas2023_santa_maria_utm_area_c
 
 # area no nivel de paisagem (landscape - l)
-paisagens_area_l <- landscapemetrics::lsm_l_area_mn(landscape = paisagens_list[[1]])
-paisagens_area_l
-
-paisagens_area_l_all <- landscapemetrics::lsm_l_area_mn(landscape = paisagens_list)
-paisagens_area_l_all
+mapbiomas1985_santa_maria_utm_area_l <- landscapemetrics::lsm_l_area_mn(landscape = mapbiomas1985_santa_maria_utm)
+mapbiomas1985_santa_maria_utm_area_l
 
 # calcular todas as metricas por nivel ------------------------------------
 
@@ -214,142 +240,92 @@ paisagens_area_l_all
 #' facilita a entrada de parametros
 #' permite escolha por ‘level’, ‘metric’, ‘name’, ‘type’, ‘what’
 
-# patch level
-lsm_patch <- landscapemetrics::calculate_lsm(landscape = paisagens_list[[1]], 
-                                             level = "patch", 
-                                             edge_depth = 1, # celulas
-                                             neighbourhood = 8, # oito celulas nas vizinhancas
-                                             full_name = TRUE, 
-                                             verbose = TRUE, 
-                                             progress = TRUE)
-lsm_patch
+# calcular multiplas metricas
+lsm_multiplas_metricas_1985 <- landscapemetrics::calculate_lsm(landscape = mapbiomas1985_santa_maria_utm, 
+                                                               metric = c("area", "core", "enn"), 
+                                                               level = "class",
+                                                               edge_depth = 1, # borda
+                                                               neighbourhood = 8, # oito celulas nas vizinhancas
+                                                               full_name = TRUE, 
+                                                               verbose = TRUE, 
+                                                               progress = TRUE)
+lsm_multiplas_metricas_1985
 
-# class level
-lsm_class <- landscapemetrics::calculate_lsm(landscape = paisagens_list[[1]], 
-                                             level = "class", 
-                                             edge_depth = 1, # celulas
-                                             neighbourhood = 8, # oito celulas nas vizinhancas
-                                             full_name = TRUE, 
-                                             verbose = TRUE, 
-                                             progress = TRUE)
-lsm_class
-
-# landscape level
-lsm_landscape <- landscapemetrics::calculate_lsm(landscape = paisagens_list[[1]], 
-                                                 level = "landscape",
-                                                 edge_depth = 1, # celulas
-                                                 neighbourhood = 8, # oito celulas nas vizinhancas
-                                                 full_name = TRUE, 
-                                                 verbose = TRUE, 
-                                                 progress = TRUE)
-lsm_landscape
+lsm_multiplas_metricas_2023 <- landscapemetrics::calculate_lsm(landscape = mapbiomas2023_santa_maria_utm, 
+                                                               metric = c("area", "core", "enn"), 
+                                                               level = "class",
+                                                               edge_depth = 1, # borda
+                                                               neighbourhood = 8, # oito celulas nas vizinhancas
+                                                               full_name = TRUE, 
+                                                               verbose = TRUE, 
+                                                               progress = TRUE)
+lsm_multiplas_metricas_2023
 
 # espacializar as metricas ------------------------------------
 
 # reclassificar
-paisagen01_forest <- raster::reclassify(x = paisagens_list[[1]], rcl = c(0,3,NA, 3,4,1))
-paisagen01_forest
+mapbiomas1985_santa_maria_utm_forest <- terra::ifel(mapbiomas1985_santa_maria_utm == 3, 1, NA)
+mapbiomas1985_santa_maria_utm_forest
+plot(mapbiomas1985_santa_maria_utm_forest, col = "forestgreen")
 
-tm_shape(paisagen01_forest) +
-    tm_raster(pal = "forestgreen", legend.show = FALSE)
+mapbiomas1985_santa_maria_utm_grassland <- terra::ifel(mapbiomas1985_santa_maria_utm == 12, 1, NA)
+mapbiomas1985_santa_maria_utm_grassland
+plot(mapbiomas1985_santa_maria_utm_grassland, col = "orange")
+
+mapbiomas2023_santa_maria_utm_forest <- terra::ifel(mapbiomas2023_santa_maria_utm == 3, 1, NA)
+mapbiomas2023_santa_maria_utm_forest
+plot(mapbiomas2023_santa_maria_utm_forest, col = "forestgreen")
+
+mapbiomas2023_santa_maria_utm_grassland <- terra::ifel(mapbiomas2023_santa_maria_utm == 12, 1, NA)
+mapbiomas2023_santa_maria_utm_grassland
+plot(mapbiomas2023_santa_maria_utm_grassland, col = "orange")
 
 # calcular e espacializar
-paisagen01_forest_patch <- landscapemetrics::spatialize_lsm(paisagen01_forest,
-                                                            what = "patch", 
-                                                            progress = TRUE)
-paisagen01_forest_patch
+mapbiomas1985_santa_maria_utm_forest_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas1985_santa_maria_utm_forest,
+    metric = "area",
+    progress = TRUE)
+mapbiomas1985_santa_maria_utm_forest_area
+
+mapbiomas1985_santa_maria_utm_grassland_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas1985_santa_maria_utm_forest,
+    metric = "area",
+    progress = TRUE)
+mapbiomas1985_santa_maria_utm_forest_area
+
+mapbiomas2023_santa_maria_utm_forest_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas2023_santa_maria_utm_forest,
+    metric = "area",
+    progress = TRUE)
+mapbiomas2023_santa_maria_utm_forest_area
+
+mapbiomas2023_santa_maria_utm_grassland_area <- landscapemetrics::spatialize_lsm(
+    landscape = mapbiomas2023_santa_maria_utm_grassland,
+    metric = "area",
+    progress = TRUE)
+mapbiomas2023_santa_maria_utm_grassland_area
 
 # mapa
-tm_shape(paisagen01_forest_patch$layer_1$lsm_p_area) +
-    tm_raster(pal = "viridis", title = "Área (ha)")
+tm_shape(mapbiomas1985_santa_maria_utm_forest_area$layer_1$lsm_p_area) +
+    tm_raster(col = "value", 
+              col.scale = tm_scale_continuous_log10(values = "matplotlib.greens"),
+              col.legend = tm_legend(title = "Área (ha)",
+                                     position = tm_pos_out("right", "center"), 
+                                     reverse = TRUE))
 
-tm_shape(paisagen01_forest_patch$layer_1$lsm_p_shape) +
-    tm_raster(pal = "viridis", title = "Formato")
+tm_shape(mapbiomas1985_santa_maria_utm_grassland_area$layer_1$lsm_p_area) +
+    tm_raster(col = "value", 
+              col.scale = tm_scale_continuous_log10(values = "Oranges"),
+              col.legend = tm_legend(title = "Área (ha)",
+                                     position = tm_pos_out("right", "center"), 
+                                     reverse = TRUE))
 
-tm_shape(paisagen01_forest_patch$layer_1$lsm_p_enn) +
-    tm_raster(pal = "viridis", title = "Distância (m)")
+tm_shape(mapbiomas2023_santa_maria_utm_habitat_area$layer_1$lsm_p_area) +
+    tm_raster(col = "value", 
+              col.scale = tm_scale_continuous_log10(values = "viridis"),
+              col.legend = tm_legend(title = "Área (ha)",
+                                     position = tm_pos_out("right", "center"), 
+                                     reverse = TRUE))
 
-# multiplas escalas -------------------------------------------------------
-
-# tamanhos
-tamanhos <- c(100, 200, 500, 1000)
-tamanhos
-
-# multiplos buffers
-buffers_multi <- sf::st_buffer(x = sf::st_as_sf(purrr::map_dfr(amost_vetor, rep, 4)), 
-                               dist = rep(tamanhos, each = 10))
-buffers_multi$buffer <- rep(tamanhos, each = 10)
-buffers_multi
-
-# map
-tm_shape(uso_raster) +
-    tm_raster(style = "cat", title = "Legenda", alpha = .5,
-              palette = c("blue", "orange", "gray", "forestgreen", "green")) +
-    tm_shape(buffers_multi) +
-    tm_borders(col = "red") 
-
-# metricas multiplas escalas
-metricas_multiplas_escalas <- tamanhos %>% 
-    set_names() %>% 
-    map_dfr(~sample_lsm(landscape = uso_raster, 
-                        y = amost_vetor, 
-                        shape = "circle",
-                        size = .,
-                        what = c("lsm_c_np", "lsm_c_area_mn", "lsm_c_pland"),
-                        all_classes = TRUE,
-                        return_raster = TRUE,
-                        verbose = TRUE,
-                        progress = TRUE), 
-            .id = "buffer")
-metricas_multiplas_escalas
-
-# map
-tm_shape(paisagens_list[[1]]) +
-    tm_raster(style = "cat", title = "Legenda", alpha = .7,
-              palette = c("blue", "orange", "forestgreen")) +
-    tm_shape(buffers_multi) +
-    tm_borders(col = "red") +
-    tm_shape(amost_vetor[1, ]) +
-    tm_bubbles()
-
-tm_shape(metricas_multiplas_escalas[metricas_multiplas_escalas$layer == 1 &
-                                        metricas_multiplas_escalas$buffer == 100, ]$raster_sample_plots[[1]], 
-         bbox = buffers_multi[31,]) +
-    tm_raster(style = "cat", title = "Legenda", alpha = .7,
-              palette = c("blue", "orange", "forestgreen")) +
-    tm_shape(buffers_multi) +
-    tm_borders(col = "red")  +
-    tm_shape(amost_vetor[1, ]) +
-    tm_bubbles()
-
-tm_shape(metricas_multiplas_escalas[metricas_multiplas_escalas$layer == 1 &
-                                        metricas_multiplas_escalas$buffer == 200, ]$raster_sample_plots[[1]], 
-         bbox = buffers_multi[31,]) +
-    tm_raster(style = "cat", title = "Legenda", alpha = .7,
-              palette = c("blue", "orange", "forestgreen")) +
-    tm_shape(buffers_multi) +
-    tm_borders(col = "red")  +
-    tm_shape(amost_vetor[1, ]) +
-    tm_bubbles()
-
-tm_shape(metricas_multiplas_escalas[metricas_multiplas_escalas$layer == 1 &
-                                        metricas_multiplas_escalas$buffer == 500, ]$raster_sample_plots[[1]], 
-         bbox = buffers_multi[31,]) +
-    tm_raster(style = "cat", title = "Legenda", alpha = .7,
-              palette = c("blue", "orange", "forestgreen")) +
-    tm_shape(buffers_multi) +
-    tm_borders(col = "red")  +
-    tm_shape(amost_vetor[1, ]) +
-    tm_bubbles()
-
-tm_shape(metricas_multiplas_escalas[metricas_multiplas_escalas$layer == 1 &
-                                        metricas_multiplas_escalas$buffer == 1000, ]$raster_sample_plots[[1]], 
-         bbox = buffers_multi[31,]) +
-    tm_raster(style = "cat", title = "Legenda", alpha = .7,
-              palette = c("blue", "orange", "forestgreen")) +
-    tm_shape(buffers_multi) +
-    tm_borders(col = "red")  +
-    tm_shape(amost_vetor[1, ]) +
-    tm_bubbles()
 
 # end ---------------------------------------------------------------------
