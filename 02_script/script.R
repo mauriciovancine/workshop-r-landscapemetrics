@@ -8,6 +8,7 @@
 
 # instalar e carregar pacotes
 if(!require(tidyverse)) install.packages("tidyverse")
+if(!require(writexl)) install.packages("writexl")
 if(!require(pdftools)) install.packages("pdftools")
 if(!require(geobr)) install.packages("geobr")
 if(!require(raster)) install.packages("raster")
@@ -21,7 +22,7 @@ if(!require(landscapemetrics)) install.packages("landscapemetrics")
 if(!require(tmap)) install_github("r-tmap/tmap")
 
 # verificar tmap
-packageVersion("tmap") # ‘3.99.9002’
+packageVersion("tmap") # ‘3.99.9003’
 
 # options
 options(timeout = 600)
@@ -85,7 +86,7 @@ mapbiomas_2023_santa_maria_classes <- terra::freq(mapbiomas_2023_santa_maria) %>
     dplyr::arrange(value)
 mapbiomas_2023_santa_maria_classes
 
-# plot - vai demorar um pouco...
+# plot - demora um pouco...
 map_lulc_1985 <- tm_shape(mapbiomas_1985_santa_maria) +
     tm_raster(col = "santamaria_1985", 
               col.scale = tm_scale_categorical(values = mapbiomas_1985_santa_maria_classes$color,
@@ -224,7 +225,7 @@ landscape_metrics_type <- landscape_metrics %>%
     dplyr::summarise(n = n())
 landscape_metrics_type
 
-# calcular as metricas ----------------------------------------------------
+# calcular metricas separadamente ---------------------------------------
 
 #' estrutura das funcoes
 #' 1. prefixo: ‘lsm_’
@@ -254,7 +255,7 @@ mapbiomas_2023_santa_maria_utm_area_c
 mapbiomas_1985_santa_maria_utm_area_l <- landscapemetrics::lsm_l_area_mn(landscape = mapbiomas_1985_santa_maria_utm)
 mapbiomas_1985_santa_maria_utm_area_l
 
-# calcular todas as metricas por nivel ------------------------------------
+# calcular varias metricas juntas ---------------------------------------
 
 #' calculate_lsm()
 #' calcula varias metricas simultaneamente
@@ -308,6 +309,7 @@ lsm_multiplas_metricas_temporal <- lsm_multiplas_metricas_1985_filter %>%
     dplyr::mutate(variation = (metric_2023 - metric_1985)/metric_1985 * 100)
 lsm_multiplas_metricas_temporal
 
+# export
 writexl::write_xlsx(lsm_multiplas_metricas_temporal, "04_results/lsm_multiplas_metricas_temporal.xlsx")
 
 # espacializar as metricas ------------------------------------
