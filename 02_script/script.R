@@ -18,14 +18,20 @@ if(!require(OpenLand)) remotes::install_github("reginalexavier/OpenLand")
 if(!require(networkD3)) install.packages("networkD3")
 if(!require(webshot2)) install.packages("webshot2")
 if(!require(landscapemetrics)) install.packages("landscapemetrics")
-# if(require(tmap)) remove.packages("r-tmap/tmap")
-if(!require(tmap)) install_github("r-tmap/tmap")
+if(require(tmap)) remove.packages("tmap")
+if(!require(tmap)) remotes::install_github("r-tmap/tmap")
+
+## solucao alternativa da Thuani
+#' install.packages('tmap', repos = c('https://r-tmap.r-universe.dev', 'https://cloud.r-project.org'))
+#' Desinstalei o pacote, reiniciei o R e usei essa linha de comando: install.packages('tmap', repos = c('https://r-tmap.r-universe.dev', 'https://cloud.r-project.org'))
 
 # verificar tmap
 packageVersion("tmap") # ‘3.99.9003’
 
 # options
 options(timeout = 600)
+
+getwd()
 
 # importar dados ----------------------------------------------------------
 
@@ -74,6 +80,8 @@ mapbiomas_2023_santa_maria <- terra::rast("03_data/mapbiomas2023_santa_maria.tif
     terra::crop(santa_maria, mask = TRUE)
 names(mapbiomas_2023_santa_maria) <- "santamaria_2023"
 mapbiomas_2023_santa_maria
+
+plot(mapbiomas_2023_santa_maria)
 
 ## classes
 mapbiomas_1985_santa_maria_classes <- terra::freq(mapbiomas_1985_santa_maria) %>% 
